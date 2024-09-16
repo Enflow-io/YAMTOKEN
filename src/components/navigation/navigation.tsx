@@ -1,8 +1,12 @@
-import React, { FC } from "react";
+import React, { FC, useState } from "react";
 import Box from "@mui/material/Box";
 import { navigations } from "./navigation.data";
 import { Link } from "@mui/material";
 import { useLocation } from "react-router-dom";
+import { useSDK } from "@metamask/sdk-react";
+
+// todo: fix absolute path
+import { shortEthAddress } from "./../../utils/eth";
 
 type NavigationData = {
   path: string;
@@ -13,16 +17,30 @@ const Navigation: FC = () => {
   const location = useLocation();
   const currentPath = location.pathname;
 
+  const [account, setAccount] = useState<string>();
+  const { sdk, connected } = useSDK();
+
+  const connect = async () => {
+    try {
+      const accounts: any = await sdk?.connect();
+      setAccount(accounts?.[0]);
+    } catch (err) {
+      console.warn("failed to connect..", err);
+    }
+  };
+
+  const notConnectedOrNoAccount = !connected || !account;
+
   return (
     <Box
       sx={{
         display: "flex",
         flexFlow: "wrap",
         justifyContent: "end",
-        flexDirection: { xs: "column", lg: "row" }
+        flexDirection: { xs: "column", lg: "row" },
       }}
     >
-      {navigations.map(({ path: destination, label }: NavigationData) =>
+      {navigations.map(({ path: destination, label }: NavigationData) => (
         <Box
           key={label}
           component={Link}
@@ -42,12 +60,12 @@ const Navigation: FC = () => {
             px: { xs: 0, lg: 3 },
             mb: { xs: 3, lg: 0 },
             fontSize: "20px",
-            ...destination === "/" && { color: "primary.main" },
+            ...(destination === "/" && { color: "primary.main" }),
             "& > div": { display: "none" },
             "&.current>div": { display: "block" },
             "&:hover": {
-              color: "text.disabled"
-            }
+              color: "text.disabled",
+            },
           }}
         >
           <Box
@@ -55,7 +73,7 @@ const Navigation: FC = () => {
               position: "absolute",
               top: 12,
               transform: "rotate(3deg)",
-              "& img": { width: 44, height: "auto" }
+              "& img": { width: 44, height: "auto" },
             }}
           >
             {/* eslint-disable-next-line */}
@@ -63,8 +81,9 @@ const Navigation: FC = () => {
           </Box>
           {label}
         </Box>
-      )}
+      ))}
       <Box
+        onClick={() => connect()}
         sx={{
           position: "relative",
           color: "white",
@@ -82,10 +101,15 @@ const Navigation: FC = () => {
           width: "324px",
           height: "45px",
           borderRadius: "6px",
-          backgroundColor: "#00dbe3"
+          backgroundColor: "#00dbe3",
         }}
       >
-        Connect Wallet
+        {notConnectedOrNoAccount && "Connect Wallet"}
+        {!notConnectedOrNoAccount && (
+          <div>
+            <>{account && shortEthAddress(account)}</>
+          </div>
+        )}
       </Box>
     </Box>
   );
